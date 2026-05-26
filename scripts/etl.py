@@ -3,11 +3,12 @@ from sqlalchemy import create_engine
 import os
 import logging
 
-# base path
+# base dir
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# log
+# setup log
 LOG_PATH = os.path.join(BASE_DIR, "logs", "etl.log")
+
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 logging.basicConfig(
@@ -16,68 +17,132 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# connect ke DB
+# db connection
 engine = create_engine(
-    "postgresql+psycopg2://nexa:nexa123@localhost:5432/nexaflow_db"
+    "postgresql+psycopg2://nexa:nexa123@postgres:5432/nexaflow_db"
 )
 
 # extract data
 def extract():
-    print("EXTRACT START")
+    try:
+        print("EXTRACT START")
 
-    cars = pd.read_csv("../data/Cars.csv")
-    customers = pd.read_csv("../data/Customers.csv")
-    sales = pd.read_csv("../data/Sales.csv")
+        cars = pd.read_csv("../data/Cars.csv")
+        customers = pd.read_csv("../data/Customers.csv")
+        sales = pd.read_csv("../data/Sales.csv")
 
-    print("EXTRACT DONE")
-    return cars, customers, sales
+        print("EXTRACT DONE")
+
+        return cars, customers, sales
+
+    except Exception as e:
+        logging.error(f"EXTRACT ERROR: {e}")
+        raise
 
 
 # transform data
 def transform(cars, customers, sales):
-    print("TRANSFORM START")
+    try:
+        print("TRANSFORM START")
 
-    cars.columns = cars.columns.str.strip().str.lower().str.replace(" ", "_")
-    customers.columns = customers.columns.str.strip().str.lower().str.replace(" ", "_")
-    sales.columns = sales.columns.str.strip().str.lower().str.replace(" ", "_")
+        # normalize column names
+        cars.columns = (
+            cars.columns
+            .str.strip()
+            .str.lower()
+            .str.replace(" ", "_")
+        )
 
-    # remove junk columns
-    cars = cars.loc[:, ~cars.columns.str.contains("^unnamed")]
-    customers = customers.loc[:, ~customers.columns.str.contains("^unnamed")]
-    sales = sales.loc[:, ~sales.columns.str.contains("^unnamed")]
+        customers.columns = (
+            customers.columns
+            .str.strip()
+            .str.lower()
+            .str.replace(" ", "_")
+        )
 
-    # convert date
-    sales["sale_date"] = pd.to_datetime(
-        sales["sale_date"],
-        errors="coerce",
-        dayfirst=True
-    )
+        sales.columns = (
+            sales.columns
+            .str.strip()
+            .str.lower()
+            .str.replace(" ", "_")
+        )
 
-    print("TRANSFORM DONE")
-    return cars, customers, sales
+        # remove unnamed columns
+        cars = cars.loc[:, ~cars.columns.str.contains("^unnamed")]
+        customers = customers.loc[:, ~customers.columns.str.contains("^unnamed")]
+        sales = sales.loc[:, ~sales.columns.str.contains("^unnamed")]
+
+        # convert sale_date
+        sales["sale_date"] = pd.to_datetime(
+            sales["sale_date"],
+            errors="coerce",
+            dayfirst=True
+        )
+
+        print("TRANSFORM DONE")
+
+        return cars, customers, sales
+
+    except Exception as e:
+        logging.error(f"TRANSFORM ERROR: {e}")
+        raise
 
 
 # load data
 def load(cars, customers, sales):
-    print("LOAD START")
+    try:
+        print("LOAD START")
 
-    cars.to_sql("cars", engine, if_exists="replace", index=False)
-    customers.to_sql("customers", engine, if_exists="replace", index=False)
-    sales.to_sql("sales", engine, if_exists="replace", index=False)
+        cars.to_sql(
+            "cars",
+            engine,
+            if_exists="replace",
+            index=False
+        )
 
-    print("LOAD DONE")
+        customers.to_sql(
+            "customers",
+            engine,
+            if_exists="replace",
+            index=False
+        )
+
+        sales.to_sql(
+            "sales",
+            engine,
+            if_exists="replace",
+            index=False
+        )
+
+        print("LOAD DONE")
+
+    except Exception as e:
+        logging.error(f"LOAD ERROR: {e}")
+        raise
 
 
-# running ETL
+# run etl pipeline
 def run():
-    print("ETL START")
+    try:
+        print("ETL START")
 
-    cars, customers, sales = extract()
-    cars, customers, sales = transform(cars, customers, sales)
-    load(cars, customers, sales)
+        cars, customers, sales = extract()
 
-    print("ETL FINISHED")
+        cars, customers, sales = transform(
+            cars,
+            customers,
+            sales
+        )
+
+        load(cars, customers, sales)
+
+        print("ETL FINISHED")
+
+    except Exception as e:
+        print("ETL FAILED")
+        logging.error(f"ETL FAILED: {e}")
 
 
+# main
 if __name__ == "__main__":
     run()
