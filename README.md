@@ -4,23 +4,22 @@
 
 NexaFlow is an end-to-end Data Engineering project that simulates a real-world ETL workflow for automotive sales analytics.
 
-The pipeline extracts raw CSV datasets containing vehicle inventory, customer information, and sales transactions, then performs data cleaning and transformation using Python and Pandas before loading the processed data into PostgreSQL.
+The pipeline extracts raw CSV datasets (Cars, Customers, Sales), performs data cleaning and transformation using Python and Pandas, and loads the processed data into PostgreSQL.
 
-The processed data is visualized through an interactive Streamlit dashboard to generate business insights and sales analytics.
+The processed data is visualized using a Streamlit dashboard to generate business insights and KPI monitoring.
 
-This project demonstrates fundamental Data Engineering concepts including:
+This project demonstrates core Data Engineering concepts:
 - ETL pipeline development
 - Data transformation and cleaning
-- Relational database integration
-- Analytics reporting
-- Dashboard visualization
-- Docker containerization
+- Relational database integration (PostgreSQL)
+- Workflow orchestration (Apache Airflow)
+- Data visualization (Streamlit)
+- Containerization using Docker
 
 ## Data Source
-
 This project is built using a publicly available Kaggle dataset:
 
-🔗 Raw Car Sales Dataset  
+🔗 Raw Car Sales Dataset
 https://www.kaggle.com/datasets/yukeshgk/raw-car-sales-data-set
 
 The dataset simulates a real-world automotive sales system including vehicle inventory, customer data, and sales transactions.
@@ -29,61 +28,56 @@ The dataset simulates a real-world automotive sales system including vehicle inv
 - Python (Pandas)
 - PostgreSQL
 - SQLAlchemy
+- Apache Airflow
 - Streamlit
-- Docker
+- Docker & Docker Compose
+
+## Architecture
+
+CSV Data → Airflow DAG → ETL (Extract / Transform / Load) → PostgreSQL → Streamlit Dashboard
 
 ## Features
 
 ### ETL Pipeline
-- Extract raw CSV datasets
-- Transform and clean inconsistent data
-- Load processed data into PostgreSQL
+- Extract data from CSV files
+- Clean and normalize datasets
+- Load structured data into PostgreSQL
+
+### Airflow Orchestration
+- DAG-based workflow execution
+- Task scheduling and monitoring
 
 ### Data Processing
 - Column normalization
-- Date conversion
-- Removal of invalid columns
-- Structured tabular modeling
+- Date parsing and conversion
+- Data cleaning and filtering
 
 ### Analytics Dashboard
-- KPI monitoring
-- Brand distribution analysis
-- Sales performance visualization
-- Interactive raw dataset preview
+- KPI metrics (sales, customers, cars)
+- Revenue analytics
+- Top customers & cars
+- Interactive dataset preview
 
 ### Containerization
-- Dockerized PostgreSQL database
-- Dockerized Streamlit application
-- Multi-container orchestration using Docker Compose
+- PostgreSQL container
+- Airflow container
+- Streamlit application container
+- Docker Compose orchestration
 
-## Run ETL Pipeline
+---
+
+## Running 
+### ETL Pipeline
 python scripts/etl.py
 
-## Run Streamlit Dashboard
+### Run Airflow
+docker compose up airflow
+
+### Run Streamlit Dashboard
 streamlit run scripts/dashboard.py
 
-## Run with Docker
-Build and start containers:
+### Run Full System (Docker)
 docker compose up --build
 
-Run in background mode:
-docker compose up -d
-
-Stop containers:
+Stop system:
 docker compose down
-
-## Dashboard Preview
-The Streamlit dashboard includes:
-
-- Business KPI metrics
-- Top car brands analysis
-- Sales performance visualization
-- Interactive data tables
-
-## Future Improvements
-- Apache Airflow orchestration
-- dbt transformation layer
-- Kafka streaming pipeline
-- CI/CD integration
-- Cloud deployment
-- Monitoring and observability
