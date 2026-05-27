@@ -3,33 +3,35 @@ from sqlalchemy import create_engine
 import os
 import logging
 
-# base dir
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# path config
 
-# setup log
+BASE_DIR = "/opt/airflow"
+DATA_PATH = os.path.join(BASE_DIR, "data")
 LOG_PATH = os.path.join(BASE_DIR, "logs", "etl.log")
 
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 
 logging.basicConfig(
     filename=LOG_PATH,
-    level=logging.WARNING,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 # db connection
+
 engine = create_engine(
     "postgresql+psycopg2://nexa:nexa123@postgres:5432/nexaflow_db"
 )
 
 # extract data
+
 def extract():
     try:
         print("EXTRACT START")
 
-        cars = pd.read_csv("../data/Cars.csv")
-        customers = pd.read_csv("../data/Customers.csv")
-        sales = pd.read_csv("../data/Sales.csv")
+        cars = pd.read_csv(os.path.join(DATA_PATH, "Cars.csv"))
+        customers = pd.read_csv(os.path.join(DATA_PATH, "Customers.csv"))
+        sales = pd.read_csv(os.path.join(DATA_PATH, "Sales.csv"))
 
         print("EXTRACT DONE")
 
@@ -41,43 +43,32 @@ def extract():
 
 
 # transform data
+
 def transform(cars, customers, sales):
     try:
         print("TRANSFORM START")
 
         # normalize column names
-        cars.columns = (
-            cars.columns
-            .str.strip()
-            .str.lower()
-            .str.replace(" ", "_")
-        )
-
-        customers.columns = (
-            customers.columns
-            .str.strip()
-            .str.lower()
-            .str.replace(" ", "_")
-        )
-
-        sales.columns = (
-            sales.columns
-            .str.strip()
-            .str.lower()
-            .str.replace(" ", "_")
-        )
+        for df in [cars, customers, sales]:
+            df.columns = (
+                df.columns
+                .str.strip()
+                .str.lower()
+                .str.replace(" ", "_")
+            )
 
         # remove unnamed columns
         cars = cars.loc[:, ~cars.columns.str.contains("^unnamed")]
         customers = customers.loc[:, ~customers.columns.str.contains("^unnamed")]
         sales = sales.loc[:, ~sales.columns.str.contains("^unnamed")]
 
-        # convert sale_date
-        sales["sale_date"] = pd.to_datetime(
-            sales["sale_date"],
-            errors="coerce",
-            dayfirst=True
-        )
+        # convert date if exists
+        if "sale_date" in sales.columns:
+            sales["sale_date"] = pd.to_datetime(
+                sales["sale_date"],
+                errors="coerce",
+                dayfirst=True
+            )
 
         print("TRANSFORM DONE")
 
@@ -89,30 +80,15 @@ def transform(cars, customers, sales):
 
 
 # load data
+
 def load(cars, customers, sales):
     try:
         print("LOAD START")
 
-        cars.to_sql(
-            "cars",
-            engine,
-            if_exists="replace",
-            index=False
-        )
-
-        customers.to_sql(
-            "customers",
-            engine,
-            if_exists="replace",
-            index=False
-        )
-
-        sales.to_sql(
-            "sales",
-            engine,
-            if_exists="replace",
-            index=False
-        )
+        # load ke postgresql
+        cars.to_sql("cars", engine, if_exists="replace", index=False)
+        customers.to_sql("customers", engine, if_exists="replace", index=False)
+        sales.to_sql("sales", engine, if_exists="replace", index=False)
 
         print("LOAD DONE")
 
@@ -121,19 +97,14 @@ def load(cars, customers, sales):
         raise
 
 
-# run etl pipeline
+# run di local
+
 def run():
     try:
         print("ETL START")
 
         cars, customers, sales = extract()
-
-        cars, customers, sales = transform(
-            cars,
-            customers,
-            sales
-        )
-
+        cars, customers, sales = transform(cars, customers, sales)
         load(cars, customers, sales)
 
         print("ETL FINISHED")
@@ -141,8 +112,8 @@ def run():
     except Exception as e:
         print("ETL FAILED")
         logging.error(f"ETL FAILED: {e}")
+        raise
 
 
-# main
 if __name__ == "__main__":
     run()
