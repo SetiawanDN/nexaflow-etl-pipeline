@@ -1,29 +1,71 @@
 services:
-
   postgres:
     image: postgres:15
     container_name: nexaflow_postgres
-
     environment:
       POSTGRES_USER: nexa
       POSTGRES_PASSWORD: nexa123
       POSTGRES_DB: nexaflow_db
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  airflow-init:
+    image: apache/airflow:2.7.2
+    container_name: airflow_init
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://nexa:nexa123@postgres:5432/nexaflow_db
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+    entrypoint: >
+      bash -c "airflow db init &&
+               airflow users create --username admin --password admin --firstname admin --lastname admin --role Admin --email admin@admin.com"
+
+  airflow-webserver:
+    image: apache/airflow:2.7.2
+    container_name: nexaflow_airflow_webserver
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://nexa:nexa123@postgres:5432/nexaflow_db
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+    ports:
+      - "8080:8080"
+    command: webserver
+
+  airflow-scheduler:
+    image: apache/airflow:2.7.2
+    container_name: nexaflow_airflow_scheduler
+    depends_on:
+      - airflow-webserver
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://nexa:nexa123@postgres:5432/nexaflow_db
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./scripts:/opt/airflow/scripts
+      - ./data:/opt/airflow/data
+    command: scheduler
 
   app:
     build: .
     container_name: nexaflow_app
-
-    depends_on:
-      - postgres
-
     ports:
       - "8501:8501"
+    volumes:
+      - ./scripts:/app/scripts
+      - ./data:/app/data
 
 volumes:
   postgres_data:
