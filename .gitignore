@@ -1,4 +1,14 @@
+# virtual environment
 venv/
+
+# python cache
 __pycache__/
 *.pyc
+
+# environment variables
 .env
+
+# airflow logs
+logs/
+airflow/logs/
+*.log
